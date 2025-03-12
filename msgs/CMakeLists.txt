@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(DIRECTORY msg FILES
 	Property.msg
 	Solution.msg
+	SolutionsToVisualize.msg
 	SolutionInfo.msg
 	StageDescription.msg
 	StageStatistics.msg
@@ -24,6 +25,7 @@ add_message_files(DIRECTORY msg FILES
 
 add_service_files(DIRECTORY srv FILES
 	GetSolution.srv
+	SendSolution.srv
 )
 
 add_action_files(DIRECTORY action FILES

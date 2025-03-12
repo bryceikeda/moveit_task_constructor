@@ -107,7 +107,8 @@ static bool getJointStateFromOffset(const boost::any& direction, const Interface
 // Create an arrow marker from start_pose to reached_pose, split into a red and green part based on achieved distance
 static void visualizePlan(std::deque<visualization_msgs::Marker>& markers, Interface::Direction dir, bool success,
                           const std::string& ns, const std::string& frame_id, const Eigen::Isometry3d& start_pose,
-                          const Eigen::Isometry3d& reached_pose, const Eigen::Vector3d& linear, double distance) {
+                          const Eigen::Isometry3d& reached_pose, const Eigen::Vector3d& linear, double distance,
+								  const std::string& original_frame_id) {
 	double linear_norm = linear.norm();
 
 	// rotation of the target direction and for the cylinder marker
@@ -122,12 +123,27 @@ static void visualizePlan(std::deque<visualization_msgs::Marker>& markers, Inter
 	visualization_msgs::Marker m;
 	m.ns = ns;
 	m.header.frame_id = frame_id;
+	geometry_msgs::PoseStamped pose;
+	pose.header.frame_id = frame_id;
+
 	if (dir == Interface::FORWARD) {
 		if (success) {
-			// valid part: green arrow
-			rviz_marker_tools::makeArrow(m, pos_start, pos_reached, 0.1 * linear_norm);
-			rviz_marker_tools::setColor(m.color, rviz_marker_tools::LIME_GREEN);
-			markers.push_back(m);
+			if(ns == "lift" || ns == "translate" || ns == "retract"){
+				// valid part: green arrow
+				rviz_marker_tools::appendTranslateOnlyCodeFrame(markers, pose, ns, original_frame_id);
+				rviz_marker_tools::makeArrowFromTipMarker(m, pos_start, pos_reached, original_frame_id);
+				rviz_marker_tools::setColor(m.color, rviz_marker_tools::LIME_GREEN);
+				markers.push_back(m);
+			}
+			else if(ns == "approach" || ns == "place")
+			{
+				// valid part: green arrow
+				rviz_marker_tools::appendTranslateOnlyCodeFrame(markers, pose, ns, original_frame_id);
+				rviz_marker_tools::makeArrowFromBaseMarker(m, pos_reached, pos_start, original_frame_id);
+				rviz_marker_tools::setColor(m.color, rviz_marker_tools::LIME_GREEN);
+				markers.push_back(m);
+			}
+
 		} else {
 			// invalid part: red arrow
 			// set head length to keep default shaft:head proportion of 1:0.3 as defined in
@@ -147,9 +163,23 @@ static void visualizePlan(std::deque<visualization_msgs::Marker>& markers, Inter
 	} else {
 		// valid part: green arrow
 		// head length according to above comment
-		rviz_marker_tools::makeArrow(m, pos_reached, pos_start, 0.1 * linear_norm, 0.23 * linear_norm);
-		rviz_marker_tools::setColor(m.color, rviz_marker_tools::LIME_GREEN);
-		markers.push_back(m);
+		if(ns == "lift" || ns == "translate" || ns == "retract"){
+			// valid part: green arrow
+			rviz_marker_tools::appendTranslateOnlyCodeFrame(markers, pose, ns, original_frame_id);
+			rviz_marker_tools::makeArrowFromTipMarker(m, pos_start, pos_reached, original_frame_id);
+			rviz_marker_tools::setColor(m.color, rviz_marker_tools::LIME_GREEN);
+			markers.push_back(m);
+
+		}
+		else if(ns == "approach" || ns == "place")
+		{
+			// valid part: green arrow
+			rviz_marker_tools::appendTranslateOnlyCodeFrame(markers, pose, ns, original_frame_id);
+			rviz_marker_tools::makeArrowFromBaseMarker(m, pos_reached, pos_start,original_frame_id);
+			rviz_marker_tools::setColor(m.color, rviz_marker_tools::LIME_GREEN);
+			markers.push_back(m);
+		}
+
 		if (!success) {
 			// invalid part: red cylinder
 			rviz_marker_tools::makeCylinder(m, 0.1 * linear_norm, linear_norm - distance);
@@ -194,7 +224,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 	robot_trajectory::RobotTrajectoryPtr robot_trajectory;
 	bool success = false;
 	std::string comment = "";
-
+	std::string original_frame_id = "";
 	if (getJointStateFromOffset(direction, dir, jmg, scene->getCurrentStateNonConst())) {
 		// plan to joint-space target
 		auto result = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
@@ -223,6 +253,8 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 			const Eigen::Isometry3d& frame_pose = scene->getFrameTransform(target.header.frame_id);
 			tf2::fromMsg(target.twist.linear, linear);
 			tf2::fromMsg(target.twist.angular, angular);
+			
+			original_frame_id = target.header.frame_id; 
 
 			linear_norm = linear.norm();
 			angular_norm = angular.norm();
@@ -257,6 +289,24 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 			auto R = Eigen::AngleAxisd(angular_norm, angular);  // NOLINT(readability-identifier-naming)
 			auto p = ik_pose_world.translation();
 			target_eigen = Eigen::Translation3d(linear + p - R * p) * (R * ik_pose_world);
+			
+			auto ns = props.get<std::string>("marker_ns");
+
+			if (ns != "lift" && ns != "translate" && ns != "retract" && ns != "approach" && ns != "place") {
+				geometry_msgs::PoseStamped pose;
+				// Use the actual target position from target_eigen
+				Eigen::Vector3d position_vector = target_eigen.translation();
+				pose.pose.position = tf2::toMsg(position_vector);
+				
+				// Use the actual target orientation from target_eigen
+				Eigen::Quaterniond orientation_quaternion(target_eigen.rotation());
+				pose.pose.orientation = tf2::toMsg(orientation_quaternion);
+				pose.header.frame_id = scene->getPlanningFrame();
+	 
+				rviz_marker_tools::appendRotateOnlyCodeFrame(solution.markers(), pose, "rotate", original_frame_id);
+				rviz_marker_tools::appendGripperRotateFrame(solution.markers(), pose, "rotate", original_frame_id);
+		  }
+
 			goto COMPUTE;
 		} catch (const boost::bad_any_cast&) { /* continue with Vector */
 		}
@@ -265,6 +315,8 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 			const geometry_msgs::Vector3Stamped& target = boost::any_cast<geometry_msgs::Vector3Stamped>(direction);
 			const Eigen::Isometry3d& frame_pose = scene->getFrameTransform(target.header.frame_id);
 			tf2::fromMsg(target.vector, linear);
+
+			original_frame_id = target.header.frame_id; 
 
 			// use max distance?
 			if (max_distance > 0.0) {
@@ -325,7 +377,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 			auto ns = props.get<std::string>("marker_ns");
 			if (!ns.empty() && linear_norm > 0) {  // ensures that 'distance' is the norm of the reached distance
 				visualizePlan(solution.markers(), dir, success, ns, scene->getPlanningFrame(), ik_pose_world, reached_pose,
-				              linear, distance);
+				              linear, distance, original_frame_id);
 			}
 		}
 	}

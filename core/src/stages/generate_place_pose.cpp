@@ -106,8 +106,32 @@ void GeneratePlacePose::compute() {
 	// target pose w.r.t. planning frame
 	scene->getTransforms().transformPose(pose_msg.header.frame_id, target_pose, target_pose);
 
+	// Extract dimensions for visualization
+	Eigen::Vector3d dimensions(0.05, 0.05, 0.05);  // Default small dimensions
+	if (object && object->getShapes().size() == 1) {
+		switch (object->getShapes()[0]->type) {
+			case shapes::BOX: {
+					const double* dims = static_cast<const shapes::Box&>(*object->getShapes()[0]).size;
+					dimensions = Eigen::Vector3d(dims[0], dims[1], dims[2]);
+					break;
+			}
+			case shapes::CYLINDER: {
+					const shapes::Cylinder& cylinder = static_cast<const shapes::Cylinder&>(*object->getShapes()[0]);
+					dimensions = Eigen::Vector3d(cylinder.radius*2, cylinder.radius*2, cylinder.length);
+					break;
+			}
+			case shapes::SPHERE: {
+					double radius = static_cast<const shapes::Sphere&>(*object->getShapes()[0]).radius;
+					dimensions = Eigen::Vector3d(radius*2, radius*2, radius*2);
+					break;
+			}
+			default:
+					break;
+		}
+	}
+
 	// spawn the nominal target object pose, considering flip about z and rotations about z-axis
-	auto spawner = [&s, &scene, &ik_frame, this](const Eigen::Isometry3d& nominal, uint z_flips, uint z_rotations = 10) {
+	auto spawner = [&s, &scene, &ik_frame, &dimensions, this](const Eigen::Isometry3d& nominal, uint z_flips, uint z_rotations = 10) {
 		for (uint flip = 0; flip <= z_flips; ++flip) {
 			// flip about object's x-axis
 			Eigen::Isometry3d object = nominal * Eigen::AngleAxisd(flip * M_PI, Eigen::Vector3d::UnitX());
@@ -130,8 +154,10 @@ void GeneratePlacePose::compute() {
 
 				SubTrajectory trajectory;
 				trajectory.setCost(0.0);
-				rviz_marker_tools::appendFrame(trajectory.markers(), target_pose_msg, 0.1, "place frame");
 
+				rviz_marker_tools::appendCartesianFrame(trajectory.markers(), target_pose_msg, "Generate Place Pose");
+
+				rviz_marker_tools::appendObjectPose(trajectory.markers(), target_pose_msg, "Generate Place Pose", ik_frame.header.frame_id);
 				spawn(std::move(state), std::move(trajectory));
 			}
 		}

@@ -145,6 +145,7 @@ public:
 
 	/// publish all top-level solutions
 	void publishAllSolutions(bool wait = true);
+	void updateSolutionsToVisualize();
 
 	// +1 TODO: convenient access to arbitrary stage by name. traverse hierarchy using / separator?
 	/// access stage tree

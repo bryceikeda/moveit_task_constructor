@@ -179,7 +179,8 @@ void GenerateGraspPose::compute() {
 		trajectory.setComment(std::to_string(current_angle));
 
 		// add frame at target pose
-		rviz_marker_tools::appendFrame(trajectory.markers(), target_pose_msg, 0.1, "grasp frame");
+		//rviz_marker_tools::appendFrame(trajectory.markers(), target_pose_msg, 0.1, "grasp frame");
+		rviz_marker_tools::appendGripperFrame(trajectory.markers(), target_pose_msg, "Generate Grasp Pose", target_pose_msg.header.frame_id);
 
 		spawn(std::move(state), std::move(trajectory));
 	}

@@ -43,11 +43,14 @@
 #include <moveit_task_constructor_msgs/TaskStatistics.h>
 #include <moveit_task_constructor_msgs/Solution.h>
 #include <moveit_task_constructor_msgs/GetSolution.h>
+#include <moveit_task_constructor_msgs/SolutionsToVisualize.h>
+#include <moveit_task_constructor_msgs/SendSolution.h>
 
 #define DESCRIPTION_TOPIC "description"
 #define STATISTICS_TOPIC "statistics"
 #define SOLUTION_TOPIC "solution"
 #define GET_SOLUTION_SERVICE "get_solution"
+#define VISUALIZATION_TOPIC "solutions_to_visualize" 
 
 namespace moveit {
 namespace task_constructor {
@@ -82,6 +85,17 @@ public:
 	/// publish the current state of task
 	void publishTaskState();
 
+	// --------------------------------------------ADDED-----------------------------------------------------
+	
+	// fill solutions to visualize message for publishing the current computed solutions
+	// moveit_task_constructor_msgs::SolutionsToVisualize& 
+	// fillSolutionsToVisualize(moveit_task_constructor_msgs::Solution& msg, 
+	// 													const moveit_task_constructor_msgs::SubSolution sub_solutions[], 
+	// 													size_t num_solutions);
+	// publish the current solutions that can be visualized, or just the visualization with errors
+	void updateSolutionsToVisualize();
+
+
 	/// indicate that this task was reset
 	void reset();
 
@@ -93,6 +107,7 @@ public:
 
 	/// publish all top-level solutions of task
 	void publishAllSolutions(bool wait = true);
+
 
 	/// get solution
 	bool getSolution(moveit_task_constructor_msgs::GetSolution::Request& req,

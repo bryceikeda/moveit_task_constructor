@@ -220,21 +220,45 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 			return false;
 		}
 
-		if (!getPoseGoal(goal, scene, target) && !getPointGoal(goal, ik_pose_world, scene, target)) {
+		//------------------------------------------------------
+		bool isPoseGoal = getPoseGoal(goal, scene, target);
+		bool isPointGoal = false;
+		if(!isPoseGoal){
+			isPointGoal = getPointGoal(goal, ik_pose_world, scene, target);
+		}
+
+		if (!isPoseGoal && !isPointGoal) {
 			solution.markAsFailure(std::string("invalid goal type: ") + goal.type().name());
 			return false;
 		}
 
-		auto add_frame{ [&](const Eigen::Isometry3d& pose, const char name[]) {
-			geometry_msgs::PoseStamped msg;
-			msg.header.frame_id = scene->getPlanningFrame();
-			msg.pose = tf2::toMsg(pose);
-			rviz_marker_tools::appendFrame(solution.markers(), msg, 0.1, name);
-		} };
-
 		// visualize plan with frame at target pose and frame at link
-		add_frame(target, "target frame");
-		add_frame(ik_pose_world, "ik frame");
+		geometry_msgs::PoseStamped ik_frame;
+		ik_frame.header.frame_id = scene->getPlanningFrame();
+		ik_frame.pose = tf2::toMsg(ik_pose_world);
+		rviz_marker_tools::appendIKFrame(solution.markers(), ik_frame, "ik frame", link->getName());
+
+		// Prepare visualization for target
+		geometry_msgs::PoseStamped target_vis;
+		target_vis.header.frame_id = scene->getPlanningFrame();
+		target_vis.pose = tf2::toMsg(target);
+		std::string marker_name = isPoseGoal ? "pose_goal" : "point_goal";
+		std::string original_frame = "";
+
+		if (isPoseGoal) {
+			original_frame = boost::any_cast<geometry_msgs::PoseStamped>(goal).header.frame_id;
+			rviz_marker_tools::appendCodeFrame(solution.markers(), target_vis, marker_name, original_frame);
+			rviz_marker_tools::appendGripperPoseFrame(solution.markers(), target_vis, marker_name);
+
+		} else {
+			original_frame = boost::any_cast<geometry_msgs::PointStamped>(goal).header.frame_id;
+			target_vis.pose.orientation = ik_frame.pose.orientation; 
+			rviz_marker_tools::appendTranslateOnlyCodeFrame(solution.markers(), target_vis, marker_name, original_frame);
+			rviz_marker_tools::appendGripperPointFrame(solution.markers(), target_vis, marker_name);
+		}
+
+		//------------------------------------------------------
+
 
 		// offset from link to ik_frame
 		Eigen::Isometry3d offset = scene->getCurrentState().getGlobalLinkTransform(link).inverse() * ik_pose_world;

@@ -4,6 +4,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <std_msgs/ColorRGBA.h>
 #include <visualization_msgs/Marker.h>
+#include <ros/console.h>
 
 namespace urdf {
 class Geometry;
@@ -68,7 +69,14 @@ inline visualization_msgs::Marker& makeMesh(visualization_msgs::Marker& m, const
 
 /// create an arrow with a start and end point
 visualization_msgs::Marker& makeArrow(visualization_msgs::Marker& m, const Eigen::Vector3d& start_point,
-                                      const Eigen::Vector3d& end_point, double diameter, double head_length = 0.0);
+                                      const Eigen::Vector3d& end_point, double diameter, double head_length = 0.0, 
+												  const std::string& parent_frame = "unknown");
+
+/// create an arrow with translation from base
+visualization_msgs::Marker& makeArrowFromBaseMarker(visualization_msgs::Marker& m, const Eigen::Vector3d& start_point, const Eigen::Vector3d& end_point, const std::string& parent_frame="");
+
+/// create an arrow with translation from tip
+visualization_msgs::Marker& makeArrowFromTipMarker(visualization_msgs::Marker& m, const Eigen::Vector3d& start_point, const Eigen::Vector3d& end_point, const std::string& parent_frame="");
 
 /// create an arrow along x-axis
 visualization_msgs::Marker& makeArrow(visualization_msgs::Marker& m, double scale = 1.0, bool tip_at_origin = false);
@@ -80,29 +88,217 @@ visualization_msgs::Marker& makeText(visualization_msgs::Marker& m, const std::s
 visualization_msgs::Marker& makeFromGeometry(visualization_msgs::Marker& m, const urdf::Geometry& geom);
 
 template <typename T>
-void appendFrame(T& container, const geometry_msgs::PoseStamped& pose, double scale = 1.0,
-                 const std::string& ns = "frame", double diameter_fraction = 0.1) {
+void appendCartesianFrame(T& container, const geometry_msgs::PoseStamped& pose, 
+								const std::string& ns = "", const std::string& parent_frame = "") {
 	visualization_msgs::Marker m;
-	makeCylinder(m, scale * diameter_fraction, scale);
 	m.ns = ns;
 	m.header = pose.header;
 
-	// x-axis
-	m.pose = composePoses(pose.pose, Eigen::Translation3d(scale / 2.0, 0, 0) *
-	                                     Eigen::AngleAxisd(M_PI / 2.0, Eigen::Vector3d::UnitY()));
-	setColor(m.color, RED);
-	container.push_back(m);
+	std::string info = "cartesian_frame/" + parent_frame;
 
-	// y-axis
-	m.pose = composePoses(pose.pose, Eigen::Translation3d(0, scale / 2.0, 0) *
-	                                     Eigen::AngleAxisd(M_PI / 2.0, Eigen::Vector3d::UnitX()));
-	setColor(m.color, GREEN);
-	container.push_back(m);
+	makeMesh(m, info);
 
-	// z-axis
-	m.pose = composePoses(pose.pose, Eigen::Translation3d(0, 0, scale / 2.0) * Eigen::Isometry3d::Identity());
-	setColor(m.color, BLUE);
+	m.pose = pose.pose;
 	container.push_back(m);
 }
+template <typename T>
+void appendReverseCodeFrame(T& container, const geometry_msgs::PoseStamped& pose, 
+								const std::string& ns = "", const std::string& parent_frame = "") {
+	visualization_msgs::Marker m;
+	m.ns = ns;
+	m.header = pose.header;
+
+	std::string info = "reverse_code_frame/" + parent_frame;
+
+	makeMesh(m, info);
+
+	m.pose = pose.pose;
+	container.push_back(m);
+}
+
+template <typename T>
+void appendCodeFrame(T& container, const geometry_msgs::PoseStamped& pose, 
+								const std::string& ns = "", const std::string& parent_frame = "") {
+	visualization_msgs::Marker m;
+	m.ns = ns;
+	m.header = pose.header;
+
+	std::string info = "code_frame/" + parent_frame;
+
+	makeMesh(m, info);
+
+	m.pose = pose.pose;
+	container.push_back(m);
+}
+
+template <typename T>
+void appendTranslateOnlyCodeFrame(T& container, const geometry_msgs::PoseStamped& pose, 
+								const std::string& ns = "", const std::string& parent_frame = "") {
+	visualization_msgs::Marker m;
+	m.ns = ns;
+	m.header = pose.header;
+
+	std::string info = "translate_only_code_frame/" + parent_frame;
+
+	makeMesh(m, info);
+
+	m.pose = pose.pose;
+	container.push_back(m);
+}
+
+template <typename T>
+void appendRotateOnlyCodeFrame(T& container, const geometry_msgs::PoseStamped& pose, 
+								const std::string& ns = "", const std::string& parent_frame = "") {
+	visualization_msgs::Marker m;
+	m.ns = ns;
+	m.header = pose.header;
+
+	std::string info = "rotate_only_code_frame/" + parent_frame;
+
+	makeMesh(m, info);
+
+	m.pose = pose.pose;
+	container.push_back(m);
+}
+
+template <typename T>
+void appendIKFrame(T& container, const geometry_msgs::PoseStamped& pose, 
+								const std::string& ns = "", const std::string& parent_frame = "") {
+	visualization_msgs::Marker m;
+	m.ns = ns;
+	m.header = pose.header;
+
+	std::string info = "ik_frame/" + parent_frame;
+
+	makeMesh(m, info);
+	m.pose = pose.pose;
+	container.push_back(m);
+}
+
+
+template <typename T>
+void appendGripperFrame(T& container, const geometry_msgs::PoseStamped& pose, 
+								const std::string& ns = "",  const std::string& parent_frame = "") {
+	visualization_msgs::Marker m;
+	m.ns = ns;
+	m.header = pose.header;
+
+	std::string info = "gripper_frame/" + parent_frame;
+
+	makeMesh(m, info);
+	m.pose = pose.pose;
+	container.push_back(m);
+}
+
+template <typename T>
+void appendGripperRotateFrame(T& container, const geometry_msgs::PoseStamped& pose, 
+								const std::string& ns = "",  const std::string& parent_frame = "") {
+	visualization_msgs::Marker m;
+	m.ns = ns;
+	m.header = pose.header;
+
+	std::string info = "gripper_rotate_frame/" + parent_frame;
+
+	makeMesh(m, info);
+	m.pose = pose.pose;
+	container.push_back(m);
+}
+
+template <typename T>
+void appendGripperPickFrame(T& container, const geometry_msgs::PoseStamped& pose, 
+								const std::string& ns = "",  const std::string& parent_frame = "") {
+	visualization_msgs::Marker m;
+	m.ns = ns;
+	m.header = pose.header;
+
+	std::string info = "gripper_pick_frame/" + parent_frame;
+
+	makeMesh(m, info);
+	m.pose = pose.pose;
+	container.push_back(m);
+}
+
+template <typename T>
+void appendGripperPoseFrame(T& container, const geometry_msgs::PoseStamped& pose, 
+								const std::string& ns = "",  const std::string& parent_frame = "") {
+	visualization_msgs::Marker m;
+	m.ns = ns;
+	m.header = pose.header;
+
+	std::string info = "gripper_pose_frame/" + parent_frame;
+
+	makeMesh(m, info);
+	m.pose = pose.pose;
+	container.push_back(m);
+}
+
+template <typename T>
+void appendGripperPointFrame(T& container, const geometry_msgs::PoseStamped& pose, 
+								const std::string& ns = "",  const std::string& parent_frame = "") {
+	visualization_msgs::Marker m;
+	m.ns = ns;
+	m.header = pose.header;
+
+	std::string info = "gripper_point_frame/" + parent_frame;
+
+	makeMesh(m, info);
+	m.pose = pose.pose;
+	container.push_back(m);
+}
+
+template <typename T>
+void appendObjectPose(T& container, const geometry_msgs::PoseStamped& pose, 
+							const std::string& ns = "", const std::string& parent_frame = "") {
+	visualization_msgs::Marker m;
+	m.ns = ns;
+	m.header = pose.header;
+	m.pose = pose.pose;
+	std::string info = "object_marker/" + parent_frame;
+	makeMesh(m, info);
+	container.push_back(m);
+}
+
+template <typename T>
+void appendObjectPlacePose(T& container, const geometry_msgs::PoseStamped& pose, 
+										const std::string& ns = "", const std::string& parent_frame = "") {
+	visualization_msgs::Marker m;
+	m.ns = ns;
+	m.header = pose.header;
+
+	std::string info = "object_place_pose/" + parent_frame;
+
+	makeMesh(m, info);
+	m.pose = pose.pose;
+	container.push_back(m);
+}
+
+template <typename T>
+void appendObjectPickPose(T& container, const geometry_msgs::PoseStamped& pose, 
+										const std::string& ns = "", const std::string& parent_frame = "") {
+	visualization_msgs::Marker m;
+	m.ns = ns;
+	m.header = pose.header;
+
+	std::string info = "object_pick_pose/" + parent_frame;
+
+	makeMesh(m, info);
+	m.pose = pose.pose;
+	container.push_back(m);
+}
+
+template <typename T>
+void appendCartesianVisualFrame(T& container, const geometry_msgs::PoseStamped& pose, 
+								const std::string& ns = "", const std::string& parent_frame = "") {
+	visualization_msgs::Marker m;
+	m.ns = ns;
+	m.header = pose.header;
+
+	std::string info = "cartesian_frame_visual/" + parent_frame;
+
+	makeMesh(m, info);
+	m.pose = pose.pose;
+	container.push_back(m);
+}
+
 
 }  // namespace rviz_marker_tools

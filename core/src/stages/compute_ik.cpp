@@ -324,10 +324,26 @@ void ComputeIK::compute() {
 	bool colliding =
 	    !ignore_collisions && isTargetPoseCollidingInEEF(scene, sandbox_state, target_pose, link, jmg, &collisions);
 
+
+	// Check if object is attached
+	std::vector<const moveit::core::AttachedBody*> attached_bodies;
+	scene->getCurrentState().getAttachedBodies(attached_bodies);
+	bool isPlace = !attached_bodies.empty();
+
 	// frames at target pose and ik frame
 	std::deque<visualization_msgs::Marker> frame_markers;
-	rviz_marker_tools::appendFrame(frame_markers, target_pose_msg, 0.1, "target frame");
-	rviz_marker_tools::appendFrame(frame_markers, ik_pose_msg, 0.1, "ik frame");
+
+	if(isPlace)
+	{
+		//rviz_marker_tools::appendObjectPose(frame_markers, ik_pose_msg, "ik target", ik_pose_msg.header.frame_id);
+		rviz_marker_tools::appendCodeFrame(frame_markers, target_pose_msg, "ik target", target_pose_msg.header.frame_id);
+	}
+	else
+	{
+		rviz_marker_tools::appendReverseCodeFrame(frame_markers, ik_pose_msg, "ik target", ik_pose_msg.header.frame_id);
+	}
+
+
 	// end-effector markers
 	std::deque<visualization_msgs::Marker> eef_markers;
 	// visualize placed end-effector

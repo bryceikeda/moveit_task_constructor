@@ -112,7 +112,7 @@ void GenerateRandomPose::compute() {
 		SubTrajectory trajectory;
 		trajectory.setCost(0.0);
 
-		rviz_marker_tools::appendFrame(trajectory.markers(), target_pose, 0.1, "pose frame");
+		//rviz_marker_tools::appendFrame(trajectory.markers(), target_pose, 0.1, "pose frame");
 
 		spawn(std::move(state), std::move(trajectory));
 	};

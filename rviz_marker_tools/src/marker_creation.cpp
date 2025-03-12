@@ -269,7 +269,7 @@ vm::Marker& makeMesh(vm::Marker& m, const std::string& filename, double sx, doub
 }
 
 vm::Marker& makeArrow(vm::Marker& m, const Eigen::Vector3d& start_point, const Eigen::Vector3d& end_point,
-                      double diameter, double head_length) {
+                      double diameter, double head_length, const std::string& parent_frame) {
 	// scale.y is set according to default proportions in rviz/default_plugin/markers/arrow_marker.cpp#L61
 	// for the default head_length=0, the head length will keep the default proportion defined in arrow_marker.cpp#L106
 	m.scale.x = diameter;
@@ -279,6 +279,34 @@ vm::Marker& makeArrow(vm::Marker& m, const Eigen::Vector3d& start_point, const E
 	m.points.resize(2);
 	m.points[0] = tf2::toMsg(start_point);
 	m.points[1] = tf2::toMsg(end_point);
+	m.mesh_resource = parent_frame; 
+	return m;
+}
+
+vm::Marker& makeArrowFromTipMarker(vm::Marker& m, const Eigen::Vector3d& start_point, const Eigen::Vector3d& end_point, const std::string& parent_frame) {
+	// scale.y is set according to default proportions in rviz/default_plugin/markers/arrow_marker.cpp#L61
+	// for the default head_length=0, the head length will keep the default proportion defined in arrow_marker.cpp#L106
+	std::string info = "arrow_from_tip/" + parent_frame;
+	makeMesh(m, info);
+
+	m.points.resize(2);
+	m.points[0] = tf2::toMsg(start_point);
+	m.points[1] = tf2::toMsg(end_point);
+
+	return m;
+}
+
+vm::Marker& makeArrowFromBaseMarker(vm::Marker& m, const Eigen::Vector3d& start_point, const Eigen::Vector3d& end_point, const std::string& parent_frame) {
+	// scale.y is set according to default proportions in rviz/default_plugin/markers/arrow_marker.cpp#L61
+	// for the default head_length=0, the head length will keep the default proportion defined in arrow_marker.cpp#L106
+	std::string info = "arrow_from_base/" + parent_frame;
+	makeMesh(m, info);
+
+	m.points.resize(2);
+	m.points[0] = tf2::toMsg(start_point);
+	m.points[1] = tf2::toMsg(end_point);
+
+
 	return m;
 }
 
@@ -317,7 +345,16 @@ vm::Marker& makeFromGeometry(vm::Marker& m, const urdf::Geometry& geom) {
 		}
 		case urdf::Geometry::MESH: {
 			const urdf::Mesh& mesh = static_cast<const urdf::Mesh&>(geom);
-			makeMesh(m, mesh.filename, mesh.scale.x, mesh.scale.y, mesh.scale.z);
+			// filenames look like this: package://moveit_resources_panda_description/meshes/visual/link7.dae
+			// I just want it to say link7
+			std::string filename = mesh.filename;
+			size_t last_slash = filename.find_last_of('/');
+			size_t last_dot = filename.find_last_of('.');
+			std::string link_name = (last_slash != std::string::npos && last_dot != std::string::npos) ? 
+					filename.substr(last_slash + 1, last_dot - last_slash - 1) : filename;
+			
+			makeMesh(m, link_name + "/" + m.header.frame_id, mesh.scale.x, mesh.scale.y, mesh.scale.z);
+			m.ns = "ik target";
 			break;
 		}
 		default:
