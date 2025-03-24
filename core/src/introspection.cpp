@@ -88,10 +88,18 @@ public:
 
 		task_statistics_publisher_ =
 		    nh_.advertise<moveit_task_constructor_msgs::TaskStatistics>(STATISTICS_TOPIC, 1, true);
+		
+		// --------------------------------------------ADDED-----------------------------------------------------
+		solutions_to_visualize_client_ =
+		    nh_.serviceClient<moveit_task_constructor_msgs::SendSolution>(VISUALIZATION_TOPIC, true);
+
 		solution_publisher_ = nh_.advertise<moveit_task_constructor_msgs::Solution>(SOLUTION_TOPIC, 1, true);
 
 		get_solution_service_ =
 		    nh_.advertiseService(std::string(GET_SOLUTION_SERVICE "_") + task_id_, &Introspection::getSolution, self);
+
+		error_client = 
+		    nh_.serviceClient<moveit_task_constructor_msgs::SendSolution>("/error_report_service", true);	
 
 		resetMaps();
 	}
@@ -117,13 +125,18 @@ public:
 	const TaskPrivate* task_;
 	const std::string task_id_;
 
-	/// publish task detailed description and current state
+	/// publish task detailed description and current state and solutions to visualize
 	ros::Publisher task_description_publisher_;
 	ros::Publisher task_statistics_publisher_;
+
 	/// publish new solutions
 	ros::Publisher solution_publisher_;
 	/// services to provide an individual Solution
 	ros::ServiceServer get_solution_service_;
+
+	/// client to send solutions to visualize
+	ros::ServiceClient solutions_to_visualize_client_;
+	ros::ServiceClient error_client;
 
 	/// mapping from stages to their id
 	std::map<const StagePrivate*, moveit_task_constructor_msgs::StageStatistics::_id_type> stage_to_id_map_;
@@ -146,6 +159,86 @@ void Introspection::publishTaskState() {
 	impl->task_statistics_publisher_.publish(fillTaskStatistics(msg));
 }
 
+// --------------------------------------------ADDED-----------------------------------------------------
+void Introspection::updateSolutionsToVisualize() {
+	::moveit_task_constructor_msgs::SolutionsToVisualize msg;
+	const auto& solutions = impl->task_->stages()->solutions();
+  
+	// Ensure we have solutions to publish
+	if (solutions.empty()) {
+		ROS_WARN("No solutions available to visualize");
+		return;
+	}
+	
+	// Create a solution message
+	moveit_task_constructor_msgs::Solution solutionMsg;
+	
+	// Fix: access the solution correctly without using ->
+	fillSolution(solutionMsg, *solutions.front());
+	
+	// Create service request
+	moveit_task_constructor_msgs::SendSolution srv;
+	srv.request.solution = solutionMsg;
+	
+	try {
+		// Fix: Call the service properly
+		if (!impl->solutions_to_visualize_client_.call(srv)) {
+			ROS_ERROR("Failed to call visualization service");
+		}
+	} catch (const std::exception& e) {
+		ROS_ERROR_STREAM("Exception calling visualization service: " << e.what());
+	}
+}
+
+void Introspection::publishFirstFailingStage(const std::string& error_message) {
+	// Get all stages with their statistics
+	moveit_task_constructor_msgs::TaskStatistics task_stats;
+	fillTaskStatistics(task_stats);
+	
+	// Find the first stage with 0 solved and >0 failed solutions
+	for (const auto& stage_stat : task_stats.stages) {
+	  if (stage_stat.solved.empty() && !stage_stat.failed.empty()) {
+		 ROS_INFO_NAMED(LOGGER, "Found failing stage with ID: %d, with %zu failed solutions", 
+							 stage_stat.id, stage_stat.failed.size());
+		 
+		 // Get the first failed solution
+		 if (!stage_stat.failed.empty()) {
+			uint32_t failed_solution_id = stage_stat.failed.front();
+			const SolutionBase* failed_solution = solutionFromId(failed_solution_id);
+			
+			if (failed_solution) {
+			  // Create a solution message and publish it
+			  moveit_task_constructor_msgs::Solution solution_msg;
+			  fillSolution(solution_msg, *failed_solution);
+			  
+			  // Add error message to the solution comment instead of overwriting task_id
+			  solution_msg.task_id = error_message;
+			  
+			  // Create service request
+			  moveit_task_constructor_msgs::SendSolution srv;
+			  srv.request.solution = solution_msg;
+			  
+			  try {
+				 // Call the service properly
+				 if (!impl->error_client.call(srv)) {
+					ROS_ERROR("Failed to call visualization service");
+				 }
+			  } catch (const std::exception& e) {
+				 ROS_ERROR_STREAM("Exception calling visualization service: " << e.what());
+			  }
+			  
+			  return;
+			} else {
+			  ROS_WARN_NAMED(LOGGER, "Could not find solution with ID: %d", failed_solution_id);
+			}
+		 }
+	  }
+	}
+	
+	ROS_INFO_NAMED(LOGGER, "No failing stages found with failed solutions");
+ }
+
+
 void Introspection::reset() {
 	impl->indicateReset();
 	impl->resetMaps();
@@ -165,6 +258,7 @@ void Introspection::publishSolution(const SolutionBase& s) {
 	fillSolution(msg, s);
 	impl->solution_publisher_.publish(msg);
 }
+
 
 void Introspection::publishAllSolutions(bool wait) {
 	for (const auto& solution : impl->task_->stages()->solutions()) {
@@ -191,7 +285,6 @@ bool Introspection::getSolution(moveit_task_constructor_msgs::GetSolution::Reque
 	const SolutionBase* solution = solutionFromId(req.solution_id);
 	if (!solution)
 		return false;
-
 	fillSolution(res.solution, *solution);
 	return true;
 }
@@ -281,5 +374,54 @@ Introspection::fillTaskStatistics(moveit_task_constructor_msgs::TaskStatistics& 
 	msg.task_id = impl->task_id_;
 	return msg;
 }
+
+// --------------------------------------------ADDED-----------------------------------------------------
+// moveit_task_constructor_msgs::SolutionsToVisualize& 
+// Introspection::fillSolutionsToVisualize(moveit_task_constructor_msgs::SolutionsToVisualize& msg, 
+//                                        const moveit_task_constructor_msgs::SubSolution sub_solutions[], 
+//                                        size_t num_solutions) {
+//     msg.solutions.clear();
+
+//     // Process each sub solution's ID to get the actual solutions
+//     for (size_t i = 0; i < num_solutions; ++i) {
+//         const auto& sub_solution = sub_solutions[i];
+// 		  ROS_INFO("Solution Number %d and Solution Stage ID %d", sub_solution.info.id, sub_solution.info.stage_id);
+// 		  const SolutionBase* solution = solutionFromId(sub_solution.info.id);
+// 		  if (!solution) {
+// 				continue;
+// 		  }
+
+// 		  // Create new solution message and fill it
+// 		  moveit_task_constructor_msgs::Solution solution_msg;
+// 		  solution->toMsg(solution_msg, this);
+// 		  solution_msg.task_id = impl->task_id_;
+// 		  msg.solutions.push_back(solution_msg);
+//     }
+
+//     return msg;
+// }
 }  // namespace task_constructor
 }  // namespace moveit
+
+
+// moveit_task_constructor_msgs::SolutionsToVisualize& 
+// Introspection::fillSolutionsToVisualize(moveit_task_constructor_msgs::SolutionsToVisualize& msg) {
+//     msg.task_id = impl->task_id_;
+//     msg.solutions.clear();
+
+//     // Get the top-level solutions from the task's root stage
+//     const auto& solutions = impl->task_->stages()->solutions();
+    
+//     // If we have at least one solution, add the best one
+//     if (!solutions.empty()) {
+//         // The solutions are stored in ordered<SolutionBaseConstPtr> which maintains them sorted by cost
+//         // So the first solution is the best one
+//         const auto& best_solution = *solutions.begin();
+        
+//         moveit_task_constructor_msgs::Solution solution_msg;
+//         fillSolution(solution_msg, *best_solution);
+//         msg.solutions.push_back(solution_msg);
+//     }
+
+//     return msg;
+// }

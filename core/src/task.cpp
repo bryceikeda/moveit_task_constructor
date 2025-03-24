@@ -39,6 +39,7 @@
 #include <moveit/task_constructor/task_p.h>
 #include <moveit/task_constructor/introspection.h>
 #include <moveit_task_constructor_msgs/ExecuteTaskSolutionAction.h>
+#include <moveit_task_constructor_msgs/SendSolution.h>
 
 #include <ros/ros.h>
 #include <actionlib/client/simple_action_client.h>
@@ -249,10 +250,19 @@ moveit::core::MoveItErrorCode Task::plan(size_t max_solutions) {
 
 	// Print state and return success if there are solutions otherwise the input error_code
 	const auto success_or = [this](const int32_t error_code) -> int32_t {
-		if (numSolutions() > 0)
+		if (numSolutions() > 0){
+			updateSolutionsToVisualize();
+			//----------------------------Should Send solutions here---------------------------------------------
 			return moveit::core::MoveItErrorCode::SUCCESS;
-		printState();
-		explainFailure();
+		}
+		//updateSolutionsToVisualize();
+		//printState();
+		std::stringstream ss;
+		bool has_failure = stages()->explainFailure(ss);
+		if (has_failure) {
+			publishFirstFailingStage(ss.str());
+		}
+		//explainFailure();// --------------------------------------------------------------------This might be where I publish failure message
 		return error_code;
 	};
 	const double available_time = timeout();
@@ -277,6 +287,20 @@ void Task::preempt() {
 
 void Task::resetPreemptRequest() {
 	pimpl()->preempt_requested_ = false;
+}
+
+void Task::updateSolutionsToVisualize()
+{
+	auto impl = pimpl();
+	if (impl->introspection_)
+	 	impl->introspection_->updateSolutionsToVisualize();
+}
+
+void Task::publishFirstFailingStage(const std::string& error_message)
+{
+	auto impl = pimpl();
+	if (impl->introspection_)
+	 	impl->introspection_->publishFirstFailingStage(error_message);
 }
 
 moveit::core::MoveItErrorCode Task::execute(const SolutionBase& s) {

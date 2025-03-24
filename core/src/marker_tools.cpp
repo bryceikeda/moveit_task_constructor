@@ -101,7 +101,7 @@ std::vector<std::string> linkNames(const std::vector<const moveit::core::LinkMod
 /** generate marker msgs to visualize the robot state, calling the given callback for each of them
  *  link_names: set of links to include (or all if empty) */
 template <class T>  // with T = urdf::Visual or urdf::Collision
-void generateMarkers(const moveit::core::RobotState& robot_state, const MarkerCallback& callback,
+void generateGreenMarkers(const moveit::core::RobotState& robot_state, const MarkerCallback& callback,
                      const std::vector<std::string>& link_names = {}) {
 	const std::vector<std::string>* names =
 	    link_names.empty() ? &robot_state.getRobotModel()->getLinkModelNames() : &link_names;
@@ -121,7 +121,12 @@ void generateMarkers(const moveit::core::RobotState& robot_state, const MarkerCa
 		bool valid_found = false;
 		auto element_handler = [&](const T& element) {
 			if (element && element->geometry) {
-				createGeometryMarker(m, *element->geometry, element->origin, materialColor(*model, materialName(*element)));
+				urdf::Color geometry_color;
+				geometry_color.r = 0.0f;
+				geometry_color.g = 0.0f;
+				geometry_color.b = 0.0f;
+				geometry_color.a = 1.0f;
+				createGeometryMarker(m, *element->geometry, element->origin, geometry_color);
 				if (m.scale.x == 0 && m.scale.y == 0 && m.scale.z == 0)
 					return;  // skip zero-size marker
 				m.pose = rviz_marker_tools::composePoses(robot_state.getGlobalLinkTransform(name), m.pose);
@@ -140,22 +145,111 @@ void generateMarkers(const moveit::core::RobotState& robot_state, const MarkerCa
 	}
 }
 
+/** generate marker msgs to visualize the robot state, calling the given callback for each of them
+ *  link_names: set of links to include (or all if empty) */
+ template <class T>  // with T = urdf::Visual or urdf::Collision
+ void generateRedMarkers(const moveit::core::RobotState& robot_state, const MarkerCallback& callback,
+							 const std::vector<std::string>& link_names = {}) {
+	 const std::vector<std::string>* names =
+		  link_names.empty() ? &robot_state.getRobotModel()->getLinkModelNames() : &link_names;
+	 const urdf::ModelInterfaceSharedPtr& model = robot_state.getRobotModel()->getURDF();
+	 if (!model)
+		 return;
+ 
+	 visualization_msgs::Marker m;
+	 m.header.frame_id = robot_state.getRobotModel()->getModelFrame();
+ 
+	 // code adapted from rviz::RobotLink::createVisual() / createCollision()
+	 for (const auto& name : *names) {
+		 const urdf::LinkConstSharedPtr& link = model->getLink(name);
+		 if (!link)
+			 return;
+ 
+		 bool valid_found = false;
+		 auto element_handler = [&](const T& element) {
+			 if (element && element->geometry) {
+				  urdf::Color geometry_color;
+					geometry_color.r = 0.8f;
+					geometry_color.g = 0.1f;
+					geometry_color.b = 0.1f;
+					geometry_color.a = 1.0f;
+				 createGeometryMarker(m, *element->geometry, element->origin, geometry_color);
+				 if (m.scale.x == 0 && m.scale.y == 0 && m.scale.z == 0)
+					 return;  // skip zero-size marker
+				 m.pose = rviz_marker_tools::composePoses(robot_state.getGlobalLinkTransform(name), m.pose);
+				 callback(m, name);
+				 valid_found = true;
+			 }
+		 };
+ 
+		 // either we have an array of collision/visual elements
+		 for (const auto& element : elements_vector<T>(*link))
+			 element_handler(element);
+ 
+		 // or there is a single such element
+		 if (!valid_found)
+			 element_handler(element<T>(*link));
+	 }
+ }
+
+
+/** generate marker msgs to visualize the robot state, calling the given callback for each of them
+ *  link_names: set of links to include (or all if empty) */
+ template <class T>  // with T = urdf::Visual or urdf::Collision
+ void generateMarkers(const moveit::core::RobotState& robot_state, const MarkerCallback& callback,
+							 const std::vector<std::string>& link_names = {}) {
+	 const std::vector<std::string>* names =
+		  link_names.empty() ? &robot_state.getRobotModel()->getLinkModelNames() : &link_names;
+	 const urdf::ModelInterfaceSharedPtr& model = robot_state.getRobotModel()->getURDF();
+	 if (!model)
+		 return;
+ 
+	 visualization_msgs::Marker m;
+	 m.header.frame_id = robot_state.getRobotModel()->getModelFrame();
+ 
+	 // code adapted from rviz::RobotLink::createVisual() / createCollision()
+	 for (const auto& name : *names) {
+		 const urdf::LinkConstSharedPtr& link = model->getLink(name);
+		 if (!link)
+			 return;
+ 
+		 bool valid_found = false;
+		 auto element_handler = [&](const T& element) {
+			 if (element && element->geometry) {
+				 createGeometryMarker(m, *element->geometry, element->origin, materialColor(*model, materialName(*element)));
+				 if (m.scale.x == 0 && m.scale.y == 0 && m.scale.z == 0)
+					 return;  // skip zero-size marker
+				 m.pose = rviz_marker_tools::composePoses(robot_state.getGlobalLinkTransform(name), m.pose);
+				 callback(m, name);
+				 valid_found = true;
+			 }
+		 };
+ 
+		 // either we have an array of collision/visual elements
+		 for (const auto& element : elements_vector<T>(*link))
+			 element_handler(element);
+ 
+		 // or there is a single such element
+		 if (!valid_found)
+			 element_handler(element<T>(*link));
+	 }
+ }
 void generateCollisionMarkers(const moveit::core::RobotState& robot_state, const MarkerCallback& callback,
                               const std::vector<std::string>& link_names) {
-	generateMarkers<urdf::CollisionSharedPtr>(robot_state, callback, link_names);
+											generateRedMarkers<urdf::CollisionSharedPtr>(robot_state, callback, link_names);
 }
 void generateCollisionMarkers(const moveit::core::RobotState& robot_state, const MarkerCallback& callback,
                               const std::vector<const moveit::core::LinkModel*>& link_models) {
-	generateMarkers<urdf::CollisionSharedPtr>(robot_state, callback, linkNames(link_models));
+											generateRedMarkers<urdf::CollisionSharedPtr>(robot_state, callback, linkNames(link_models));
 }
 
 void generateVisualMarkers(const moveit::core::RobotState& robot_state, const MarkerCallback& callback,
                            const std::vector<std::string>& link_names) {
-	generateMarkers<urdf::VisualSharedPtr>(robot_state, callback, link_names);
+										generateGreenMarkers<urdf::VisualSharedPtr>(robot_state, callback, link_names);
 }
 void generateVisualMarkers(const moveit::core::RobotState& robot_state, const MarkerCallback& callback,
                            const std::vector<const moveit::core::LinkModel*>& link_models) {
-	generateMarkers<urdf::VisualSharedPtr>(robot_state, callback, linkNames(link_models));
+										generateGreenMarkers<urdf::VisualSharedPtr>(robot_state, callback, linkNames(link_models));
 }
 
 /** generate marker msgs to visualize the planning scene, calling the given callback for each of them

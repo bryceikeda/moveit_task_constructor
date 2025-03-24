@@ -78,6 +78,12 @@ visualization_msgs::Marker& makeArrowFromBaseMarker(visualization_msgs::Marker& 
 /// create an arrow with translation from tip
 visualization_msgs::Marker& makeArrowFromTipMarker(visualization_msgs::Marker& m, const Eigen::Vector3d& start_point, const Eigen::Vector3d& end_point, const std::string& parent_frame="");
 
+/// create an arrow with translation from base
+visualization_msgs::Marker& makeRedArrowFromBaseMarker(visualization_msgs::Marker& m, const Eigen::Vector3d& start_point, const Eigen::Vector3d& end_point, const std::string& parent_frame="");
+
+/// create an arrow with translation from tip
+visualization_msgs::Marker& makeRedArrowFromTipMarker(visualization_msgs::Marker& m, const Eigen::Vector3d& start_point, const Eigen::Vector3d& end_point, const std::string& parent_frame="");
+
 /// create an arrow along x-axis
 visualization_msgs::Marker& makeArrow(visualization_msgs::Marker& m, double scale = 1.0, bool tip_at_origin = false);
 
@@ -175,7 +181,6 @@ void appendIKFrame(T& container, const geometry_msgs::PoseStamped& pose,
 	container.push_back(m);
 }
 
-
 template <typename T>
 void appendGripperFrame(T& container, const geometry_msgs::PoseStamped& pose, 
 								const std::string& ns = "",  const std::string& parent_frame = "") {
@@ -192,7 +197,7 @@ void appendGripperFrame(T& container, const geometry_msgs::PoseStamped& pose,
 
 template <typename T>
 void appendGripperRotateFrame(T& container, const geometry_msgs::PoseStamped& pose, 
-								const std::string& ns = "",  const std::string& parent_frame = "") {
+								const std::string& ns = "",  const std::string& parent_frame = "", Color color_id=rviz_marker_tools::LIME_GREEN) {
 	visualization_msgs::Marker m;
 	m.ns = ns;
 	m.header = pose.header;
@@ -201,6 +206,7 @@ void appendGripperRotateFrame(T& container, const geometry_msgs::PoseStamped& po
 
 	makeMesh(m, info);
 	m.pose = pose.pose;
+	setColor(m.color, color_id);
 	container.push_back(m);
 }
 

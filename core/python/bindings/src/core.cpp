@@ -498,8 +498,8 @@ void export_core(pybind11::module& m) {
 			        psi.applyPlanningScene(traj.scene_diff);
 		        }
 		        ROS_INFO("Executed successfully");
-	        },
-	        "solution"_a, "Send given solution to ``move_group`` node for execution");
+	        }
+			);
 }
 }  // namespace python
 }  // namespace moveit

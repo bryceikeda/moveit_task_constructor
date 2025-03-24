@@ -94,7 +94,7 @@ public:
 	// 													size_t num_solutions);
 	// publish the current solutions that can be visualized, or just the visualization with errors
 	void updateSolutionsToVisualize();
-
+	void publishFirstFailingStage(const std::string& error_message);
 
 	/// indicate that this task was reset
 	void reset();

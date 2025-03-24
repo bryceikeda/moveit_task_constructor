@@ -142,53 +142,128 @@ static void visualizePlan(std::deque<visualization_msgs::Marker>& markers, Inter
 				rviz_marker_tools::makeArrowFromBaseMarker(m, pos_reached, pos_start, original_frame_id);
 				rviz_marker_tools::setColor(m.color, rviz_marker_tools::LIME_GREEN);
 				markers.push_back(m);
+			}			
+			else {
+				geometry_msgs::PoseStamped pose;
+				Eigen::Vector3d position_vector = reached_pose.translation();
+				pose.pose.position = tf2::toMsg(position_vector);
+				Eigen::Quaterniond orientation_quaternion(reached_pose.rotation());
+				pose.pose.orientation = tf2::toMsg(orientation_quaternion);
+				pose.header.frame_id = frame_id;
+				rviz_marker_tools::appendRotateOnlyCodeFrame(markers, pose, "rotate", original_frame_id);
+				rviz_marker_tools::appendGripperRotateFrame(markers, pose, "rotate", original_frame_id, rviz_marker_tools::LIME_GREEN);
 			}
 
 		} else {
-			// invalid part: red arrow
-			// set head length to keep default shaft:head proportion of 1:0.3 as defined in
-			// rviz/default_plugin/markers/arrow_marker.cpp#L105
-			rviz_marker_tools::makeArrow(m, pos_reached, pos_target, 0.1 * linear_norm, 0.23 * linear_norm);
-			rviz_marker_tools::setColor(m.color, rviz_marker_tools::RED);
-			markers.push_back(m);
+			if(ns == "lift" || ns == "translate" || ns == "retract"){
+				// valid part: green arrow
+				rviz_marker_tools::appendTranslateOnlyCodeFrame(markers, pose, ns, original_frame_id);
+				rviz_marker_tools::makeRedArrowFromTipMarker(m, pos_start, pos_reached, original_frame_id);
+				rviz_marker_tools::setColor(m.color, rviz_marker_tools::RED);
+				markers.push_back(m);
+			}
+			else if(ns == "approach" || ns == "place")
+			{
+				// valid part: green arrow
+				rviz_marker_tools::appendTranslateOnlyCodeFrame(markers, pose, ns, original_frame_id);
+				rviz_marker_tools::makeRedArrowFromBaseMarker(m, pos_reached, pos_start, original_frame_id);
+				rviz_marker_tools::setColor(m.color, rviz_marker_tools::RED);
+				markers.push_back(m);
+			}
+			else
+			{
+				geometry_msgs::PoseStamped pose;
+				Eigen::Vector3d position_vector = reached_pose.translation();
+				pose.pose.position = tf2::toMsg(position_vector);
+				Eigen::Quaterniond orientation_quaternion(reached_pose.rotation());
+				pose.pose.orientation = tf2::toMsg(orientation_quaternion);
+				pose.header.frame_id = frame_id;
+				rviz_marker_tools::appendRotateOnlyCodeFrame(markers, pose, "rotate", original_frame_id);
+				rviz_marker_tools::appendGripperRotateFrame(markers, pose, "rotate", original_frame_id, rviz_marker_tools::RED);
+			}
+			// // invalid part: red arrow
+			// // set head length to keep default shaft:head proportion of 1:0.3 as defined in
+			// // rviz/default_plugin/markers/arrow_marker.cpp#L105
+			// rviz_marker_tools::makeArrow(m, pos_reached, pos_target, 0.1 * linear_norm, 0.23 * linear_norm);
+			// rviz_marker_tools::setColor(m.color, rviz_marker_tools::RED);
+			// markers.push_back(m);
 
-			// valid part: green cylinder
-			rviz_marker_tools::makeCylinder(m, 0.1 * linear_norm, distance);
-			rviz_marker_tools::setColor(m.color, rviz_marker_tools::LIME_GREEN);
-			// position half-way between pos_link and pos_reached
-			m.pose.position = tf2::toMsg(Eigen::Vector3d{ 0.5 * (pos_start + pos_reached) });
-			m.pose.orientation = tf2::toMsg(quat_cylinder);
-			markers.push_back(m);
+			// // valid part: green cylinder
+			// rviz_marker_tools::makeCylinder(m, 0.1 * linear_norm, distance);
+			// rviz_marker_tools::setColor(m.color, rviz_marker_tools::LIME_GREEN);
+			// // position half-way between pos_link and pos_reached
+			// m.pose.position = tf2::toMsg(Eigen::Vector3d{ 0.5 * (pos_start + pos_reached) });
+			// m.pose.orientation = tf2::toMsg(quat_cylinder);
+			// markers.push_back(m);
 		}
 	} else {
-		// valid part: green arrow
-		// head length according to above comment
-		if(ns == "lift" || ns == "translate" || ns == "retract"){
+		if(success){
 			// valid part: green arrow
-			rviz_marker_tools::appendTranslateOnlyCodeFrame(markers, pose, ns, original_frame_id);
-			rviz_marker_tools::makeArrowFromTipMarker(m, pos_start, pos_reached, original_frame_id);
-			rviz_marker_tools::setColor(m.color, rviz_marker_tools::LIME_GREEN);
-			markers.push_back(m);
+			// head length according to above comment
+			if(ns == "lift" || ns == "translate" || ns == "retract"){
+				// valid part: green arrow
+				rviz_marker_tools::appendTranslateOnlyCodeFrame(markers, pose, ns, original_frame_id);
+				rviz_marker_tools::makeArrowFromTipMarker(m, pos_start, pos_reached, original_frame_id);
+				rviz_marker_tools::setColor(m.color, rviz_marker_tools::LIME_GREEN);
+				markers.push_back(m);
 
+			}
+			else if(ns == "approach" || ns == "place")
+			{
+				// valid part: green arrow
+				rviz_marker_tools::appendTranslateOnlyCodeFrame(markers, pose, ns, original_frame_id);
+				rviz_marker_tools::makeArrowFromBaseMarker(m, pos_reached, pos_start,original_frame_id);
+				rviz_marker_tools::setColor(m.color, rviz_marker_tools::LIME_GREEN);
+				markers.push_back(m);
+			}
+			else {
+				geometry_msgs::PoseStamped pose;
+				Eigen::Vector3d position_vector = reached_pose.translation();
+				pose.pose.position = tf2::toMsg(position_vector);
+				Eigen::Quaterniond orientation_quaternion(reached_pose.rotation());
+				pose.pose.orientation = tf2::toMsg(orientation_quaternion);
+				pose.header.frame_id = frame_id;
+				rviz_marker_tools::appendRotateOnlyCodeFrame(markers, pose, "rotate", original_frame_id);
+				rviz_marker_tools::appendGripperRotateFrame(markers, pose, "rotate", original_frame_id, rviz_marker_tools::LIME_GREEN);
+			}
 		}
-		else if(ns == "approach" || ns == "place")
-		{
-			// valid part: green arrow
-			rviz_marker_tools::appendTranslateOnlyCodeFrame(markers, pose, ns, original_frame_id);
-			rviz_marker_tools::makeArrowFromBaseMarker(m, pos_reached, pos_start,original_frame_id);
-			rviz_marker_tools::setColor(m.color, rviz_marker_tools::LIME_GREEN);
-			markers.push_back(m);
-		}
+		else{
+			if(ns == "lift" || ns == "translate" || ns == "retract"){
+				// valid part: green arrow
+				rviz_marker_tools::appendTranslateOnlyCodeFrame(markers, pose, ns, original_frame_id);
+				rviz_marker_tools::makeRedArrowFromTipMarker(m, pos_start, pos_reached, original_frame_id);
+				rviz_marker_tools::setColor(m.color, rviz_marker_tools::RED);
+				markers.push_back(m);
 
-		if (!success) {
-			// invalid part: red cylinder
-			rviz_marker_tools::makeCylinder(m, 0.1 * linear_norm, linear_norm - distance);
-			rviz_marker_tools::setColor(m.color, rviz_marker_tools::RED);
-			// position half-way between pos_reached and pos_target
-			m.pose.position = tf2::toMsg(Eigen::Vector3d{ 0.5 * (pos_reached + pos_target) });
-			m.pose.orientation = tf2::toMsg(quat_cylinder);
-			markers.push_back(m);
+			}
+			else if(ns == "approach" || ns == "place")
+			{
+				// valid part: green arrow
+				rviz_marker_tools::appendTranslateOnlyCodeFrame(markers, pose, ns, original_frame_id);
+				rviz_marker_tools::makeRedArrowFromBaseMarker(m, pos_reached, pos_start,original_frame_id);
+				rviz_marker_tools::setColor(m.color, rviz_marker_tools::RED);
+				markers.push_back(m);
+			}
+			else {
+				geometry_msgs::PoseStamped pose;
+				Eigen::Vector3d position_vector = reached_pose.translation();
+				pose.pose.position = tf2::toMsg(position_vector);
+				Eigen::Quaterniond orientation_quaternion(reached_pose.rotation());
+				pose.pose.orientation = tf2::toMsg(orientation_quaternion);
+				pose.header.frame_id = frame_id;
+				rviz_marker_tools::appendRotateOnlyCodeFrame(markers, pose, "rotate", original_frame_id);
+				rviz_marker_tools::appendGripperRotateFrame(markers, pose, "rotate", original_frame_id, rviz_marker_tools::RED);
+			}
 		}
+		// if (!success) {
+		// 	// invalid part: red cylinder
+		// 	rviz_marker_tools::makeCylinder(m, 0.1 * linear_norm, linear_norm - distance);
+		// 	rviz_marker_tools::setColor(m.color, rviz_marker_tools::RED);
+		// 	// position half-way between pos_reached and pos_target
+		// 	m.pose.position = tf2::toMsg(Eigen::Vector3d{ 0.5 * (pos_reached + pos_target) });
+		// 	m.pose.orientation = tf2::toMsg(quat_cylinder);
+		// 	markers.push_back(m);
+		// }
 	}
 }
 
@@ -255,7 +330,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 			tf2::fromMsg(target.twist.angular, angular);
 			
 			original_frame_id = target.header.frame_id; 
-
+			
 			linear_norm = linear.norm();
 			angular_norm = angular.norm();
 			if (angular_norm > std::numeric_limits<double>::epsilon())
@@ -289,24 +364,6 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 			auto R = Eigen::AngleAxisd(angular_norm, angular);  // NOLINT(readability-identifier-naming)
 			auto p = ik_pose_world.translation();
 			target_eigen = Eigen::Translation3d(linear + p - R * p) * (R * ik_pose_world);
-			
-			auto ns = props.get<std::string>("marker_ns");
-
-			if (ns != "lift" && ns != "translate" && ns != "retract" && ns != "approach" && ns != "place") {
-				geometry_msgs::PoseStamped pose;
-				// Use the actual target position from target_eigen
-				Eigen::Vector3d position_vector = target_eigen.translation();
-				pose.pose.position = tf2::toMsg(position_vector);
-				
-				// Use the actual target orientation from target_eigen
-				Eigen::Quaterniond orientation_quaternion(target_eigen.rotation());
-				pose.pose.orientation = tf2::toMsg(orientation_quaternion);
-				pose.header.frame_id = scene->getPlanningFrame();
-	 
-				rviz_marker_tools::appendRotateOnlyCodeFrame(solution.markers(), pose, "rotate", original_frame_id);
-				rviz_marker_tools::appendGripperRotateFrame(solution.markers(), pose, "rotate", original_frame_id);
-		  }
-
 			goto COMPUTE;
 		} catch (const boost::bad_any_cast&) { /* continue with Vector */
 		}
@@ -375,7 +432,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 
 			// visualize plan
 			auto ns = props.get<std::string>("marker_ns");
-			if (!ns.empty() && linear_norm > 0) {  // ensures that 'distance' is the norm of the reached distance
+			if (!ns.empty() && (linear_norm > 0 || angular_norm > 0)) {  // ensures that 'distance' is the norm of the reached distance
 				visualizePlan(solution.markers(), dir, success, ns, scene->getPlanningFrame(), ik_pose_world, reached_pose,
 				              linear, distance, original_frame_id);
 			}

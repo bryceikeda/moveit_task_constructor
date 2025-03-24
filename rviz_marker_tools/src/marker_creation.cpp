@@ -310,6 +310,33 @@ vm::Marker& makeArrowFromBaseMarker(vm::Marker& m, const Eigen::Vector3d& start_
 	return m;
 }
 
+vm::Marker& makeRedArrowFromTipMarker(vm::Marker& m, const Eigen::Vector3d& start_point, const Eigen::Vector3d& end_point, const std::string& parent_frame) {
+	// scale.y is set according to default proportions in rviz/default_plugin/markers/arrow_marker.cpp#L61
+	// for the default head_length=0, the head length will keep the default proportion defined in arrow_marker.cpp#L106
+	std::string info = "red_arrow_from_tip/" + parent_frame;
+	makeMesh(m, info);
+
+	m.points.resize(2);
+	m.points[0] = tf2::toMsg(start_point);
+	m.points[1] = tf2::toMsg(end_point);
+
+	return m;
+}
+
+vm::Marker& makeRedArrowFromBaseMarker(vm::Marker& m, const Eigen::Vector3d& start_point, const Eigen::Vector3d& end_point, const std::string& parent_frame) {
+	// scale.y is set according to default proportions in rviz/default_plugin/markers/arrow_marker.cpp#L61
+	// for the default head_length=0, the head length will keep the default proportion defined in arrow_marker.cpp#L106
+	std::string info = "red_arrow_from_base/" + parent_frame;
+	makeMesh(m, info);
+
+	m.points.resize(2);
+	m.points[0] = tf2::toMsg(start_point);
+	m.points[1] = tf2::toMsg(end_point);
+
+
+	return m;
+}
+
 vm::Marker& makeArrow(vm::Marker& m, double scale, bool tip_at_origin) {
 	m.scale.y = m.scale.z = 0.1 * scale;
 	m.scale.x = scale;
