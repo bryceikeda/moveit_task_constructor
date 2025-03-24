@@ -341,10 +341,7 @@ void ComputeIK::compute() {
 	else
 	{
 		// Just used the frame because i don't know how to get the final pose, probably somewhere farther down where ik_target is set
-		geometry_msgs::PoseStamped ik_target_frame;
-		ik_target_frame.header.frame_id = "panda_hand";
-		ik_target_frame.pose.orientation.w = 1; 
-		rviz_marker_tools::appendReverseCodeFrame(frame_markers, ik_target_frame, "ik target", target_pose_msg.header.frame_id);
+		rviz_marker_tools::appendReverseCodeFrame(frame_markers, target_pose_msg, "ik target", target_pose_msg.header.frame_id);
 		//rviz_marker_tools::appendReverseCodeFrame(frame_markers, ik_target_frame, link->getName(), target_pose_msg.header.frame_id);
 	}
 

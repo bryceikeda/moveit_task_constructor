@@ -220,7 +220,6 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 			return false;
 		}
 
-		//------------------------------------------------------
 		bool isPoseGoal = getPoseGoal(goal, scene, target);
 		bool isPointGoal = false;
 		if(!isPoseGoal){
@@ -230,31 +229,6 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 		if (!isPoseGoal && !isPointGoal) {
 			solution.markAsFailure(std::string("invalid goal type: ") + goal.type().name());
 			return false;
-		}
-
-		// visualize plan with frame at target pose and frame at link
-		geometry_msgs::PoseStamped ik_frame;
-		ik_frame.header.frame_id = scene->getPlanningFrame();
-		ik_frame.pose = tf2::toMsg(ik_pose_world);
-		rviz_marker_tools::appendIKFrame(solution.markers(), ik_frame, "ik frame", link->getName());
-
-		// Prepare visualization for target
-		geometry_msgs::PoseStamped target_vis;
-		target_vis.header.frame_id = scene->getPlanningFrame();
-		target_vis.pose = tf2::toMsg(target);
-		std::string marker_name = isPoseGoal ? "pose_goal" : "point_goal";
-		std::string original_frame = "";
-
-		if (isPoseGoal) {
-			original_frame = boost::any_cast<geometry_msgs::PoseStamped>(goal).header.frame_id;
-			rviz_marker_tools::appendCodeFrame(solution.markers(), target_vis, marker_name, original_frame);
-			rviz_marker_tools::appendGripperPoseFrame(solution.markers(), target_vis, marker_name);
-
-		} else {
-			original_frame = boost::any_cast<geometry_msgs::PointStamped>(goal).header.frame_id;
-			target_vis.pose.orientation = ik_frame.pose.orientation; 
-			rviz_marker_tools::appendTranslateOnlyCodeFrame(solution.markers(), target_vis, marker_name, original_frame);
-			rviz_marker_tools::appendGripperPointFrame(solution.markers(), target_vis, marker_name);
 		}
 
 		//------------------------------------------------------
@@ -269,8 +243,52 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 		success = bool(result);
 		if (!success)
 			comment = result.message;
+
+		//------------------------------------------------------
+
+
+		// visualize plan with frame at target pose and frame at link
+		geometry_msgs::PoseStamped ik_frame;
+		ik_frame.header.frame_id = scene->getPlanningFrame();
+		ik_frame.pose = tf2::toMsg(ik_pose_world);
+		rviz_marker_tools::appendIKFrame(solution.markers(), ik_frame, "ik frame", link->getName());
+
+		// Prepare visualization for target
+		geometry_msgs::PoseStamped target_vis;
+		target_vis.header.frame_id = scene->getPlanningFrame();
+		target_vis.pose = tf2::toMsg(target);
+		std::string marker_name = isPoseGoal ? "pose_goal" : "point_goal";
+		std::string original_frame = "";
+
+		if (success){
+			if (isPoseGoal) {
+				original_frame = boost::any_cast<geometry_msgs::PoseStamped>(goal).header.frame_id;
+				rviz_marker_tools::appendCodeFrame(solution.markers(), target_vis, marker_name, original_frame);
+				rviz_marker_tools::appendGripperPoseFrame(solution.markers(), target_vis, marker_name);
+
+			} else {
+				original_frame = boost::any_cast<geometry_msgs::PointStamped>(goal).header.frame_id;
+				target_vis.pose.orientation = ik_frame.pose.orientation; 
+				rviz_marker_tools::appendTranslateOnlyCodeFrame(solution.markers(), target_vis, marker_name, original_frame);
+				rviz_marker_tools::appendGripperPointFrame(solution.markers(), target_vis, marker_name);
+			}
+		}
+		else{
+			if (isPoseGoal) {
+				original_frame = boost::any_cast<geometry_msgs::PoseStamped>(goal).header.frame_id;
+				rviz_marker_tools::appendCodeFrame(solution.markers(), target_vis, marker_name, original_frame);
+				rviz_marker_tools::appendGripperPoseFrame(solution.markers(), target_vis, marker_name, "", rviz_marker_tools::RED);
+
+			} else {
+				original_frame = boost::any_cast<geometry_msgs::PointStamped>(goal).header.frame_id;
+				target_vis.pose.orientation = ik_frame.pose.orientation; 
+				rviz_marker_tools::appendTranslateOnlyCodeFrame(solution.markers(), target_vis, marker_name, original_frame);
+				rviz_marker_tools::appendGripperPointFrame(solution.markers(), target_vis, marker_name, "", rviz_marker_tools::RED);
+			}
+		}
 	}
 
+	
 	// store result
 	if (!robot_trajectory && storeFailures()) {
 		robot_trajectory = std::make_shared<robot_trajectory::RobotTrajectory>(robot_model, jmg);

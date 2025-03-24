@@ -226,7 +226,8 @@ void appendGripperPickFrame(T& container, const geometry_msgs::PoseStamped& pose
 
 template <typename T>
 void appendGripperPoseFrame(T& container, const geometry_msgs::PoseStamped& pose, 
-								const std::string& ns = "",  const std::string& parent_frame = "") {
+								const std::string& ns = "",  const std::string& parent_frame = "", 
+								Color color_id=rviz_marker_tools::LIME_GREEN) {
 	visualization_msgs::Marker m;
 	m.ns = ns;
 	m.header = pose.header;
@@ -235,12 +236,14 @@ void appendGripperPoseFrame(T& container, const geometry_msgs::PoseStamped& pose
 
 	makeMesh(m, info);
 	m.pose = pose.pose;
+	setColor(m.color, color_id);
 	container.push_back(m);
 }
 
 template <typename T>
 void appendGripperPointFrame(T& container, const geometry_msgs::PoseStamped& pose, 
-								const std::string& ns = "",  const std::string& parent_frame = "") {
+								const std::string& ns = "",  const std::string& parent_frame = "", 
+								Color color_id=rviz_marker_tools::LIME_GREEN) {
 	visualization_msgs::Marker m;
 	m.ns = ns;
 	m.header = pose.header;
@@ -249,6 +252,7 @@ void appendGripperPointFrame(T& container, const geometry_msgs::PoseStamped& pos
 
 	makeMesh(m, info);
 	m.pose = pose.pose;
+	setColor(m.color, color_id);
 	container.push_back(m);
 }
 

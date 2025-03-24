@@ -158,7 +158,7 @@ static void visualizePlan(std::deque<visualization_msgs::Marker>& markers, Inter
 			if(ns == "lift" || ns == "translate" || ns == "retract"){
 				// valid part: green arrow
 				rviz_marker_tools::appendTranslateOnlyCodeFrame(markers, pose, ns, original_frame_id);
-				rviz_marker_tools::makeRedArrowFromTipMarker(m, pos_start, pos_reached, original_frame_id);
+				rviz_marker_tools::makeRedArrowFromTipMarker(m, pos_start, pos_target, original_frame_id);
 				rviz_marker_tools::setColor(m.color, rviz_marker_tools::RED);
 				markers.push_back(m);
 			}
@@ -166,7 +166,7 @@ static void visualizePlan(std::deque<visualization_msgs::Marker>& markers, Inter
 			{
 				// valid part: green arrow
 				rviz_marker_tools::appendTranslateOnlyCodeFrame(markers, pose, ns, original_frame_id);
-				rviz_marker_tools::makeRedArrowFromBaseMarker(m, pos_reached, pos_start, original_frame_id);
+				rviz_marker_tools::makeRedArrowFromBaseMarker(m, pos_target, pos_start, original_frame_id);
 				rviz_marker_tools::setColor(m.color, rviz_marker_tools::RED);
 				markers.push_back(m);
 			}
@@ -231,7 +231,7 @@ static void visualizePlan(std::deque<visualization_msgs::Marker>& markers, Inter
 			if(ns == "lift" || ns == "translate" || ns == "retract"){
 				// valid part: green arrow
 				rviz_marker_tools::appendTranslateOnlyCodeFrame(markers, pose, ns, original_frame_id);
-				rviz_marker_tools::makeRedArrowFromTipMarker(m, pos_start, pos_reached, original_frame_id);
+				rviz_marker_tools::makeRedArrowFromTipMarker(m, pos_start, pos_target, original_frame_id);
 				rviz_marker_tools::setColor(m.color, rviz_marker_tools::RED);
 				markers.push_back(m);
 
@@ -240,7 +240,7 @@ static void visualizePlan(std::deque<visualization_msgs::Marker>& markers, Inter
 			{
 				// valid part: green arrow
 				rviz_marker_tools::appendTranslateOnlyCodeFrame(markers, pose, ns, original_frame_id);
-				rviz_marker_tools::makeRedArrowFromBaseMarker(m, pos_reached, pos_start,original_frame_id);
+				rviz_marker_tools::makeRedArrowFromBaseMarker(m, pos_target, pos_start,original_frame_id);
 				rviz_marker_tools::setColor(m.color, rviz_marker_tools::RED);
 				markers.push_back(m);
 			}
